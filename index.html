@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MULTIDLE</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:   #538d4e;
+      --yellow:  #b59f3b;
+      --grey:    #3a3a3c;
+      --bg:      #121213;
+      --surface: #1a1a1b;
+      --border:  #3a3a3c;
+      --text:    #ffffff;
+      --muted:   #818384;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────────── */
+    header {
+      border-bottom: 1px solid var(--border);
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    /* ── Screens ─────────────────────────────────────────────────────────────── */
+    .screen { display: none; flex: 1; }
+    .screen.active { display: flex; }
+
+    /* ── Lobby ───────────────────────────────────────────────────────────────── */
+    #lobby-screen {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 36px 20px 44px;
+    }
+
+    .logo-row { display: flex; gap: 4px; margin-bottom: 4px; }
+    .logo-tile {
+      width: 44px; height: 44px;
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 700; color: var(--text);
+    }
+    .logo-tile.g { background: var(--green);  border-color: var(--green); }
+    .logo-tile.y { background: var(--yellow); border-color: var(--yellow); }
+    .logo-tile.x { background: var(--grey);   border-color: var(--grey); }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      width: 100%; max-width: 360px;
+    }
+    .card-title {
+      font-size: 0.72rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.14em;
+      margin-bottom: 18px; text-align: center;
+    }
+
+    .field { margin-bottom: 12px; }
+    label {
+      display: block; font-size: 0.7rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px;
+    }
+    input[type="text"] {
+      display: block; width: 100%;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 1rem; font-family: inherit;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      outline: none; transition: border-color 0.2s;
+    }
+    input[type="text"]::placeholder { color: var(--muted); opacity: 0.55; text-transform: none; }
+    input[type="text"]:focus { border-color: var(--muted); }
+
+    .btn {
+      display: block; width: 100%;
+      padding: 12px;
+      border: none; border-radius: 4px;
+      font-size: 0.88rem; font-weight: 700; font-family: inherit;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      cursor: pointer; transition: filter 0.15s, transform 0.1s;
+    }
+    .btn:hover  { filter: brightness(1.12); }
+    .btn:active { transform: scale(0.97); }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-dim   { background: var(--grey);  color: #fff; }
+
+    .or-divider {
+      text-align: center; color: var(--muted);
+      font-size: 0.75rem; margin: 14px 0;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .or-divider::before, .or-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── How to Play ─────────────────────────────────────────────────────────── */
+    .htp {
+      width: 100%; max-width: 360px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .htp-toggle {
+      width: 100%; padding: 11px 16px;
+      background: var(--surface);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+      color: var(--text); font-size: 0.82rem; font-weight: 700;
+      font-family: inherit; text-transform: uppercase; letter-spacing: 0.1em;
+      transition: background 0.15s;
+    }
+    .htp-toggle:hover { background: #222224; }
+    .htp-toggle .arrow { font-size: 0.65rem; color: var(--muted); transition: transform 0.2s; }
+    .htp-toggle.open .arrow { transform: rotate(180deg); }
+
+    .htp-body {
+      display: none;
+      padding: 16px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-direction: column;
+      gap: 14px;
+    }
+    .htp-body.open { display: flex; }
+
+    .htp-rules {
+      list-style: none;
+      display: flex; flex-direction: column; gap: 7px;
+    }
+    .htp-rules li {
+      font-size: 0.82rem; color: var(--muted); line-height: 1.45;
+      padding-left: 14px; position: relative;
+    }
+    .htp-rules li::before {
+      content: '·'; position: absolute; left: 0;
+      color: var(--green); font-size: 1.2rem; line-height: 1;
+    }
+
+    .htp-examples { display: flex; flex-direction: column; gap: 9px; }
+    .htp-row { display: flex; align-items: center; gap: 12px; }
+    .ex-tile {
+      width: 36px; height: 36px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.05rem; font-weight: 700; color: #fff;
+      border: 2px solid transparent;
+    }
+    .ex-tile.green  { background: var(--green);  border-color: var(--green); }
+    .ex-tile.yellow { background: var(--yellow); border-color: var(--yellow); }
+    .ex-tile.grey   { background: var(--grey);   border-color: var(--grey); }
+    .ex-desc { font-size: 0.79rem; color: var(--muted); line-height: 1.4; }
+    .ex-desc strong { color: var(--text); }
+
+    /* ── Waiting ─────────────────────────────────────────────────────────────── */
+    #waiting-screen {
+      flex-direction: column;
+      align-items: center;
+      padding: 36px 20px;
+      gap: 26px;
+    }
+
+    .code-block { text-align: center; }
+    .code-block .sublabel {
+      font-size: 0.7rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px;
+    }
+    .code-row { display: flex; align-items: center; justify-content: center; gap: 18px; }
+    .big-code { font-size: 3rem; font-weight: 700; letter-spacing: 0.45em; }
+    .copy-btn {
+      padding: 6px 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted); font-size: 0.7rem;
+      font-family: inherit; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      cursor: pointer; transition: color 0.15s, border-color 0.15s;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+
+    .players-section { width: 100%; max-width: 360px; }
+    .section-label {
+      font-size: 0.7rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px;
+    }
+    .player-list { display: flex; flex-direction: column; gap: 6px; }
+    .player-item {
+      padding: 10px 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; font-size: 0.9rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .badge {
+      font-size: 0.6rem; padding: 2px 7px;
+      border-radius: 3px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .badge-host { background: var(--green); color: #fff; }
+
+    .waiting-footer { width: 100%; max-width: 360px; }
+    .wait-hint { text-align: center; color: var(--muted); font-size: 0.82rem; margin-top: 10px; }
+
+    /* ── Game ────────────────────────────────────────────────────────────────── */
+    #game-screen { flex-direction: row; overflow: hidden; }
+
+    .game-main {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; padding: 12px 8px;
+      overflow: hidden; min-width: 0;
+    }
+
+    .game-meta {
+      font-size: 0.7rem; color: var(--muted);
+      letter-spacing: 0.07em; margin-bottom: 8px; text-align: center;
+    }
+
+    .status-msg {
+      font-size: 0.82rem; font-weight: 700;
+      min-height: 22px; margin-bottom: 8px;
+      text-align: center; letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+    .status-msg.solved { color: var(--green); }
+    .status-msg.failed { color: var(--muted); }
+
+    /* Grid */
+    #grid {
+      display: flex; flex-direction: column; gap: 5px;
+      margin-bottom: 16px;
+      perspective: 1000px;
+    }
+    .grid-row { display: flex; gap: 5px; }
+
+    .tile {
+      width: 58px; height: 58px;
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.75rem; font-weight: 700;
+      text-transform: uppercase; color: var(--text);
+      user-select: none;
+    }
+    .tile.filled { border-color: #565758; }
+    .tile.green  { background: var(--green);  border-color: var(--green);  color: #fff; }
+    .tile.yellow { background: var(--yellow); border-color: var(--yellow); color: #fff; }
+    .tile.grey   { background: var(--grey);   border-color: var(--grey);   color: #fff; }
+
+    @keyframes tile-pop {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+    .tile.pop { animation: tile-pop 0.1s ease; }
+
+    @keyframes tile-bounce {
+      0%, 100% { transform: translateY(0); }
+      40%       { transform: translateY(-18px); }
+      70%       { transform: translateY(-8px); }
+    }
+    .tile.bounce { animation: tile-bounce 0.55s ease; }
+
+    @keyframes row-shake {
+      0%, 100%  { transform: translateX(0); }
+      16%       { transform: translateX(-5px); }
+      33%       { transform: translateX(5px); }
+      50%       { transform: translateX(-5px); }
+      67%       { transform: translateX(5px); }
+      84%       { transform: translateX(-3px); }
+    }
+    .grid-row.shake { animation: row-shake 0.5s ease; }
+
+    /* Keyboard */
+    #keyboard {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 7px;
+      width: 100%; max-width: 500px; padding: 0 4px;
+    }
+    .keyboard-row { display: flex; gap: 6px; justify-content: center; }
+
+    .key {
+      height: 56px; min-width: 40px; max-width: 42px; flex: 1;
+      padding: 0 4px; border: none; border-radius: 4px;
+      background: #818384; color: #fff;
+      font-size: 0.8rem; font-weight: 700; font-family: inherit;
+      text-transform: uppercase; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.25s;
+    }
+    .key.wide { max-width: 64px; font-size: 0.7rem; }
+    .key:active { filter: brightness(0.82); }
+    .key.green  { background: var(--green); }
+    .key.yellow { background: var(--yellow); }
+    .key.grey   { background: var(--grey); }
+
+    /* Leaderboard sidebar */
+    .lb-panel {
+      width: 210px; min-width: 210px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      padding: 14px 12px;
+      display: flex; flex-direction: column; gap: 6px;
+      overflow-y: auto;
+    }
+    .lb-panel .panel-hdr {
+      font-size: 0.7rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.14em;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2px;
+    }
+    .lb-entry {
+      padding: 8px 10px; border-radius: 4px;
+      background: var(--bg); border: 1px solid var(--border);
+    }
+    .lb-entry.is-me    { border-color: #565758; }
+    .lb-entry.is-first { border-color: var(--yellow); }
+
+    .lb-name {
+      font-size: 0.82rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .lb-status { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+    .lb-entry.is-solved .lb-status { color: var(--green); }
+
+    /* ── Game Over ───────────────────────────────────────────────────────────── */
+    #gameover-screen {
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 28px; padding: 44px 20px;
+    }
+
+    .result-header { text-align: center; }
+    .result-header .label-sm {
+      font-size: 0.7rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px;
+    }
+    .result-word {
+      font-size: 3rem; font-weight: 700; letter-spacing: 0.45em;
+    }
+
+    .final-lb { width: 100%; max-width: 420px; }
+    .final-lb .lb-hdr {
+      font-size: 0.7rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 10px;
+    }
+    .final-entries { display: flex; flex-direction: column; gap: 6px; }
+
+    .final-entry {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .final-entry.top { border-color: var(--yellow); }
+
+    .f-rank {
+      font-size: 0.9rem; font-weight: 700; color: var(--muted);
+      width: 32px; text-align: center; flex-shrink: 0;
+    }
+    .f-rank.gold   { color: #b59f3b; }
+    .f-rank.silver { color: #aaa; }
+    .f-rank.bronze { color: #cd7f32; }
+
+    .f-name  { flex: 1; font-weight: 700; font-size: 0.92rem; }
+    .f-stat  { font-size: 0.75rem; color: var(--muted); text-align: right; }
+    .f-stat.solved { color: var(--green); }
+
+    /* ── Toast ───────────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; top: 68px; left: 50%; transform: translateX(-50%);
+      background: var(--text); color: var(--bg);
+      padding: 8px 18px; border-radius: 4px;
+      font-weight: 700; font-size: 0.82rem; letter-spacing: 0.06em;
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.2s; z-index: 999;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ── Responsive ──────────────────────────────────────────────────────────── */
+    @media (max-width: 580px) {
+      .tile { width: 50px; height: 50px; font-size: 1.5rem; }
+      .lb-panel { width: 150px; min-width: 150px; padding: 10px 8px; }
+      .lb-name { font-size: 0.74rem; }
+      .lb-status { font-size: 0.62rem; }
+      .key { min-width: 28px; max-width: 34px; height: 50px; font-size: 0.68rem; }
+      .key.wide { max-width: 52px; }
+    }
+    @media (max-width: 430px) {
+      .tile { width: 44px; height: 44px; font-size: 1.3rem; }
+      .lb-panel { display: none; }
+    }
+  </style>
+</head>
+<body>
+<header><h1>MULTIDLE</h1></header>
+<div id="toast"></div>
+
+<!-- ── LOBBY ── -->
+<div id="lobby-screen" class="screen active">
+  <div class="logo-row">
+    <div class="logo-tile g">M</div>
+    <div class="logo-tile y">U</div>
+    <div class="logo-tile">L</div>
+    <div class="logo-tile x">T</div>
+    <div class="logo-tile g">I</div>
+    <div class="logo-tile y">D</div>
+    <div class="logo-tile">L</div>
+    <div class="logo-tile g">E</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Create or join a room</div>
+    <div class="field">
+      <label for="inp-name">Your name</label>
+      <input id="inp-name" type="text" placeholder="e.g. Alice" maxlength="20" autocomplete="off" spellcheck="false">
+    </div>
+    <button id="btn-create" class="btn btn-green">Create Room</button>
+    <div class="or-divider">or join existing</div>
+    <div class="field">
+      <label for="inp-code">Room code</label>
+      <input id="inp-code" type="text" placeholder="XXXX" maxlength="4" autocomplete="off" spellcheck="false">
+    </div>
+    <button id="btn-join" class="btn btn-dim">Join Room</button>
+  </div>
+
+  <!-- How to Play -->
+  <div class="htp">
+    <button class="htp-toggle" id="htp-btn" onclick="toggleHTP()">
+      <span>How to Play</span>
+      <span class="arrow">&#9660;</span>
+    </button>
+    <div class="htp-body" id="htp-body">
+      <ul class="htp-rules">
+        <li>Guess the hidden 5-letter word in up to 6 tries.</li>
+        <li>All players get the <strong>same word</strong> — fastest solver wins.</li>
+        <li>Type any 5 letters and press <strong>Enter</strong> to submit.</li>
+        <li>The leaderboard updates live as players solve it.</li>
+      </ul>
+      <div class="htp-examples">
+        <div class="htp-row">
+          <div class="ex-tile green">C</div>
+          <div class="ex-desc"><strong>Green</strong> — right letter, right spot</div>
+        </div>
+        <div class="htp-row">
+          <div class="ex-tile yellow">R</div>
+          <div class="ex-desc"><strong>Yellow</strong> — letter is in the word, wrong spot</div>
+        </div>
+        <div class="htp-row">
+          <div class="ex-tile grey">Z</div>
+          <div class="ex-desc"><strong>Grey</strong> — letter is not in the word</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── WAITING ── -->
+<div id="waiting-screen" class="screen">
+  <div class="code-block">
+    <div class="sublabel">Share this code with friends</div>
+    <div class="code-row">
+      <div class="big-code" id="disp-code"></div>
+      <button class="copy-btn" onclick="copyCode()">Copy</button>
+    </div>
+  </div>
+  <div class="players-section">
+    <div class="section-label">Players &mdash; <span id="disp-count">0</span></div>
+    <div class="player-list" id="player-list"></div>
+  </div>
+  <div class="waiting-footer">
+    <button id="btn-start" class="btn btn-green" style="display:none">Start Game</button>
+    <p class="wait-hint" id="wait-hint">Waiting for the host to start&hellip;</p>
+  </div>
+</div>
+
+<!-- ── GAME ── -->
+<div id="game-screen" class="screen">
+  <div class="game-main">
+    <div class="game-meta">
+      Room&nbsp;<strong id="gm-code"></strong>&ensp;&middot;&ensp;<span id="gm-name"></span>
+    </div>
+    <div class="status-msg" id="status-msg"></div>
+    <div id="grid"></div>
+    <div id="keyboard"></div>
+  </div>
+  <div class="lb-panel">
+    <div class="panel-hdr">Live Leaderboard</div>
+    <div id="lb-entries"></div>
+  </div>
+</div>
+
+<!-- ── GAME OVER ── -->
+<div id="gameover-screen" class="screen">
+  <div class="result-header">
+    <div class="label-sm">The word was</div>
+    <div class="result-word" id="go-word"></div>
+  </div>
+  <div class="final-lb">
+    <div class="lb-hdr">Final Standings</div>
+    <div class="final-entries" id="final-entries"></div>
+  </div>
+  <button class="btn btn-dim" style="max-width:360px;width:100%" onclick="playAgain()">
+    Back to Lobby
+  </button>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let ws, toastTimer;
+const G = {
+  screen:       'lobby',
+  myId:         '',
+  myName:       '',
+  roomCode:     '',
+  isHost:       false,
+  currentRow:   0,
+  currentInput: '',
+  keyColors:    {},
+  done:         false,
+};
+
+// ─── How to Play toggle ───────────────────────────────────────────────────────
+function toggleHTP() {
+  const btn  = document.getElementById('htp-btn');
+  const body = document.getElementById('htp-body');
+  const open = body.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
+// ─── WebSocket ────────────────────────────────────────────────────────────────
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+  ws.addEventListener('open',    ()         => console.log('WS connected'));
+  ws.addEventListener('close',   ()         => toast('Disconnected — refresh to reconnect.', 4000));
+  ws.addEventListener('message', ({ data }) => handle(JSON.parse(data)));
+}
+
+function emit(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+// ─── Message handler ──────────────────────────────────────────────────────────
+function handle(msg) {
+  switch (msg.type) {
+    case 'room_created':
+      G.myId = msg.myId; G.roomCode = msg.code; G.isHost = true;
+      showWaiting(msg.players); break;
+    case 'room_joined':
+      G.myId = msg.myId; G.roomCode = msg.code; G.isHost = false;
+      showWaiting(msg.players); break;
+    case 'player_joined':
+      renderPlayerList(msg.players); break;
+    case 'game_started':
+      initGame(); break;
+    case 'guess_result':
+      onGuessResult(msg); break;
+    case 'leaderboard_update':
+      renderLB(msg.leaderboard, 'lb-entries'); break;
+    case 'game_over':
+      showGameOver(msg.word, msg.leaderboard); break;
+    case 'error':
+      toast(msg.message);
+      if (G.screen === 'game') shakeRow(G.currentRow);
+      if (msg.fatal) setTimeout(playAgain, 1600);
+      break;
+  }
+}
+
+// ─── Screen helpers ───────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(name + '-screen').classList.add('active');
+  G.screen = name;
+}
+
+function showWaiting(players) {
+  document.getElementById('disp-code').textContent = G.roomCode;
+  document.getElementById('gm-code').textContent   = G.roomCode;
+  document.getElementById('gm-name').textContent   = G.myName;
+  renderPlayerList(players);
+  document.getElementById('btn-start').style.display = G.isHost ? 'block' : 'none';
+  document.getElementById('wait-hint').style.display = G.isHost ? 'none'  : 'block';
+  showScreen('waiting');
+}
+
+function renderPlayerList(names) {
+  document.getElementById('disp-count').textContent = names.length;
+  document.getElementById('player-list').innerHTML = names
+    .map((n, i) => `<div class="player-item">
+        ${i === 0 ? '<span class="badge badge-host">Host</span>' : ''}
+        ${esc(n)}
+      </div>`)
+    .join('');
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(G.roomCode)
+    .then(() => toast('Code copied!'))
+    .catch(() => toast(G.roomCode));
+}
+
+// ─── Game initialisation ──────────────────────────────────────────────────────
+function initGame() {
+  G.currentRow   = 0;
+  G.currentInput = '';
+  G.keyColors    = {};
+  G.done         = false;
+  buildGrid();
+  buildKeyboard();
+  document.getElementById('lb-entries').innerHTML   = '';
+  document.getElementById('status-msg').textContent = '';
+  document.getElementById('status-msg').className   = 'status-msg';
+  showScreen('game');
+}
+
+function buildGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for (let r = 0; r < 6; r++) {
+    const row = document.createElement('div');
+    row.className = 'grid-row';
+    row.id = `row-${r}`;
+    for (let c = 0; c < 5; c++) {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.id = `tile-${r}-${c}`;
+      row.appendChild(tile);
+    }
+    grid.appendChild(row);
+  }
+}
+
+const KB_ROWS = [
+  ['Q','W','E','R','T','Y','U','I','O','P'],
+  ['A','S','D','F','G','H','J','K','L'],
+  ['Enter','Z','X','C','V','B','N','M','⌫'],
+];
+
+function buildKeyboard() {
+  const kb = document.getElementById('keyboard');
+  kb.innerHTML = '';
+  KB_ROWS.forEach(row => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'keyboard-row';
+    row.forEach(k => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'key' + (k === 'Enter' || k === '⌫' ? ' wide' : '');
+      btn.textContent = k;
+      btn.dataset.key = k;
+      btn.addEventListener('click', () => handleKey(k));
+      rowEl.appendChild(btn);
+    });
+    kb.appendChild(rowEl);
+  });
+}
+
+// ─── Input handling ───────────────────────────────────────────────────────────
+function handleKey(k) {
+  if (G.done || G.screen !== 'game') return;
+  if (k === '⌫' || k === 'Backspace') {
+    if (G.currentInput.length > 0) {
+      G.currentInput = G.currentInput.slice(0, -1);
+      syncCurrentRow();
+    }
+  } else if (k === 'Enter') {
+    if (G.currentInput.length < 5) { toast('Not enough letters'); shakeRow(G.currentRow); return; }
+    emit({ type: 'guess', word: G.currentInput });
+  } else if (/^[A-Za-z]$/.test(k)) {
+    if (G.currentInput.length < 5) {
+      const letter = k.toUpperCase();
+      G.currentInput += letter;
+      const tile = document.getElementById(`tile-${G.currentRow}-${G.currentInput.length - 1}`);
+      tile.textContent = letter;
+      tile.className = 'tile filled pop';
+      tile.addEventListener('animationend', () => tile.classList.remove('pop'), { once: true });
+    }
+  }
+}
+
+function syncCurrentRow() {
+  for (let c = 0; c < 5; c++) {
+    const tile   = document.getElementById(`tile-${G.currentRow}-${c}`);
+    const letter = G.currentInput[c] || '';
+    tile.textContent = letter;
+    tile.className   = 'tile' + (letter ? ' filled' : '');
+  }
+}
+
+// ─── Guess result ─────────────────────────────────────────────────────────────
+function onGuessResult({ guess, result, solved, done }) {
+  const row = G.currentRow;
+  revealRow(row, guess, result, () => {
+    G.currentRow++;
+    G.currentInput = '';
+    G.done = done;
+    if (solved) {
+      const msgs = ['Genius!', 'Magnificent!', 'Impressive!', 'Splendid!', 'Great!', 'Phew!'];
+      toast(msgs[row] ?? 'Solved!');
+      setStatus('You solved it!', 'solved');
+      for (let c = 0; c < 5; c++) {
+        const tile = document.getElementById(`tile-${row}-${c}`);
+        setTimeout(() => {
+          tile.classList.add('bounce');
+          tile.addEventListener('animationend', () => tile.classList.remove('bounce'), { once: true });
+        }, c * 80);
+      }
+    } else if (done) {
+      setStatus('Better luck next time!', 'failed');
+    }
+  });
+}
+
+function revealRow(row, guess, result, onComplete) {
+  const HALF = 180, LAG = 90;
+  result.forEach((color, i) => {
+    const tile = document.getElementById(`tile-${row}-${i}`);
+    setTimeout(() => {
+      tile.style.transition = `transform ${HALF}ms ease-in`;
+      tile.style.transform  = 'rotateX(90deg)';
+      setTimeout(() => {
+        tile.textContent      = guess[i];
+        tile.className        = `tile ${color}`;
+        tile.style.transition = `transform ${HALF}ms ease-out`;
+        tile.style.transform  = 'rotateX(0deg)';
+        const rank = { green: 3, yellow: 2, grey: 1 };
+        const cur  = G.keyColors[guess[i]];
+        if (!cur || rank[color] > rank[cur]) {
+          G.keyColors[guess[i]] = color;
+          const key = document.querySelector(`.key[data-key="${guess[i]}"]`);
+          if (key) { key.classList.remove('green','yellow','grey'); key.classList.add(color); }
+        }
+        if (i === 4) setTimeout(onComplete, HALF);
+      }, HALF);
+    }, i * LAG);
+  });
+}
+
+function shakeRow(row) {
+  const el = document.getElementById(`row-${row}`);
+  if (!el) return;
+  el.classList.add('shake');
+  el.addEventListener('animationend', () => el.classList.remove('shake'), { once: true });
+}
+
+function setStatus(text, cls) {
+  const el = document.getElementById('status-msg');
+  el.textContent = text;
+  el.className   = `status-msg ${cls}`;
+}
+
+// ─── Leaderboard ──────────────────────────────────────────────────────────────
+function renderLB(entries, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = entries.map((e, i) => {
+    let statusText, extra = '';
+    if (e.solved) {
+      statusText = `${e.guessCount} guess${e.guessCount !== 1 ? 'es' : ''} &middot; ${(e.solveTime / 1000).toFixed(1)}s`;
+      extra = 'is-solved' + (i === 0 ? ' is-first' : '');
+    } else if (e.done) {
+      statusText = e.disconnected ? 'Left the game' : 'Did not solve';
+    } else {
+      statusText = e.guessCount > 0
+        ? `${e.guessCount} guess${e.guessCount !== 1 ? 'es' : ''}&hellip;`
+        : 'Thinking&hellip;';
+    }
+    const me = e.id === G.myId ? ' is-me' : '';
+    return `<div class="lb-entry ${extra}${me}">
+      <div class="lb-name">${e.id === G.myId ? '&#9654; ' : ''}${esc(e.name)}</div>
+      <div class="lb-status">${statusText}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Game Over ────────────────────────────────────────────────────────────────
+function showGameOver(word, leaderboard) {
+  document.getElementById('go-word').textContent = word;
+  const rankLabel = ['1st', '2nd', '3rd'];
+  const rankClass = ['gold', 'silver', 'bronze'];
+  document.getElementById('final-entries').innerHTML = leaderboard.map((e, i) => {
+    const solved = e.solved;
+    const stat   = solved
+      ? `${e.guessCount} guess${e.guessCount !== 1 ? 'es' : ''} &middot; ${(e.solveTime / 1000).toFixed(1)}s`
+      : (e.disconnected ? 'Disconnected' : 'Did not solve');
+    return `<div class="final-entry ${i === 0 && solved ? 'top' : ''}">
+      <div class="f-rank ${rankClass[i] ?? ''}">${rankLabel[i] ?? `${i + 1}th`}</div>
+      <div class="f-name">${esc(e.name)}</div>
+      <div class="f-stat ${solved ? 'solved' : ''}">${stat}</div>
+    </div>`;
+  }).join('');
+  showScreen('gameover');
+}
+
+function playAgain() {
+  G.myId = ''; G.roomCode = ''; G.isHost = false;
+  G.currentRow = 0; G.currentInput = ''; G.keyColors = {}; G.done = false;
+  ws && ws.close();
+  connect();
+  showScreen('lobby');
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, dur = 1800) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ─── Keyboard events ──────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (G.screen !== 'game') return;
+  if (document.activeElement.tagName === 'INPUT') return;
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  handleKey(e.key);
+});
+
+document.getElementById('btn-create').addEventListener('click', () => {
+  const name = document.getElementById('inp-name').value.trim();
+  if (!name) { toast('Enter your name first'); return; }
+  G.myName = name;
+  emit({ type: 'create_room', name });
+});
+
+document.getElementById('btn-join').addEventListener('click', () => {
+  const name = document.getElementById('inp-name').value.trim();
+  const code = document.getElementById('inp-code').value.trim().toUpperCase();
+  if (!name)             { toast('Enter your name first'); return; }
+  if (code.length !== 4) { toast('Enter the 4-character room code'); return; }
+  G.myName = name;
+  emit({ type: 'join_room', name, code });
+});
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  emit({ type: 'start_game' });
+});
+
+['inp-name', 'inp-code'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const code = document.getElementById('inp-code').value.trim();
+    if (code) document.getElementById('btn-join').click();
+    else      document.getElementById('btn-create').click();
+  });
+});
+
+connect();
+</script>
+</body>
+</html>
